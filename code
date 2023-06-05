@@ -1,73 +1,170 @@
-class Connect4:
-    def __init__(self, starting_player=0):
+import tkinter as tk
+from tkinter import messagebox
+import random
+import pygame
+
+class Connect4GUI:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Connect4")
+        
         self.board = [[' ' for _ in range(7)] for _ in range(6)]
         self.players = ['Yellow', 'Red']
-        self.current_player = starting_player
-
-    def print_board(self):
-        for row in self.board:
-            print('|'.join(row))
-            print('-------------')
+        self.current_player = 0
+        self.scores = {'Yellow': 0, 'Red': 0}
+        
+        self.create_board()
+        self.load_music()
+        self.create_scoreboard()
+        self.create_buttons()
+        self.start_game()
     
-    def is_valid_move(self, column):
-        return column >= 0 and column < 7 and self.board[0][column] == ' '
-
+    def create_board(self):
+        self.board_frame = tk.Frame(self.root, bg='blue')
+        self.board_frame.pack(pady=10)
+        
+        self.buttons = []
+        for row in range(6):
+            row_buttons = []
+            for col in range(7):
+                button = tk.Button(
+                    self.board_frame, text=' ', width=10, height=4,
+                    command=lambda c=col: self.drop_disc(c),
+                    font=('Arial', 20, 'bold'),
+                    bg='white', fg='black',
+                    relief=tk.RAISED
+                )
+                button.grid(row=row, column=col, padx=3, pady=3)
+                row_buttons.append(button)
+            self.buttons.append(row_buttons)
+    
+    def create_scoreboard(self):
+        self.scoreboard_frame = tk.Frame(self.root)
+        self.scoreboard_frame.pack(pady=10)
+        
+        self.yellow_label = tk.Label(
+            self.scoreboard_frame, text="Yellow Wins: 0",
+            font=('Arial', 20, 'bold'), fg='black'
+        )
+        self.yellow_label.grid(row=0, column=0, padx=10)
+        
+        self.red_label = tk.Label(
+            self.scoreboard_frame, text="Red Wins: 0",
+            font=('Arial', 20, 'bold'), fg='black'
+        )
+        self.red_label.grid(row=0, column=1, padx=10)
+    
+    def create_buttons(self):
+        self.button_frame = tk.Frame(self.root, bg='blue')
+        self.button_frame.pack(pady=10)
+        
+        self.start_button = tk.Button(
+            self.button_frame, text="Start Game", command=self.start_game,
+            font=('Arial', 15, 'bold'), bg='green', fg='black',
+            relief=tk.RAISED
+        )
+        self.start_button.grid(row=0, column=0, padx=10)
+        
+        self.new_game_button = tk.Button(
+            self.button_frame, text="New Game", command=self.new_game,
+            font=('Arial', 15, 'bold'), bg='red', fg='black',
+            relief=tk.RAISED
+        )
+    
     def drop_disc(self, column):
         for row in range(5, -1, -1):
             if self.board[row][column] == ' ':
                 self.board[row][column] = self.players[self.current_player]
-                return True
-        return False
-
+                self.buttons[row][column].config(text=self.players[self.current_player])
+                self.buttons[row][column].config(bg=self.players[self.current_player].lower())
+                if self.check_win():
+                    self.play_random_music()
+                    self.show_message(f"{self.players[self.current_player]} wins!")
+                    self.scores[self.players[self.current_player]] += 1
+                    self.update_scoreboard()
+                    self.new_game_button.grid(row=0, column=1, padx=10)
+                    pygame.mixer.music.stop()
+                elif all(self.board[r][c] != ' ' for r in range(6) for c in range(7)):
+                    self.show_message("It's a tie!")
+                    self.new_game_button.grid(row=0, column=1, padx=10)
+                else:
+                    self.current_player = 1 - self.current_player
+                break
+    
     def check_win(self):
         # Check rows
         for row in range(6):
             for col in range(4):
-                if self.board[row][col] != ' ' and self.board[row][col] == self.board[row][col+1] == self.board[row][col+2] == self.board[row][col+3]:
+                if (
+                    self.board[row][col] != ' ' and
+                    self.board[row][col] == self.board[row][col+1] == self.board[row][col+2] == self.board[row][col+3]
+                ):
                     return True
 
         # Check columns
         for col in range(7):
             for row in range(3):
-                if self.board[row][col] != ' ' and self.board[row][col] == self.board[row+1][col] == self.board[row+2][col] == self.board[row+3][col]:
+                if (
+                    self.board[row][col] != ' ' and
+                    self.board[row][col] == self.board[row+1][col] == self.board[row+2][col] == self.board[row+3][col]
+                ):
                     return True
 
         # Check diagonals
         for row in range(3):
             for col in range(4):
-                if self.board[row][col] != ' ' and self.board[row][col] == self.board[row+1][col+1] == self.board[row+2][col+2] == self.board[row+3][col+3]:
+                if (
+                    self.board[row][col] != ' ' and
+                    self.board[row][col] == self.board[row+1][col+1] == self.board[row+2][col+2] == self.board[row+3][col+3]
+                ):
                     return True
 
         for row in range(3, 6):
             for col in range(4):
-                if self.board[row][col] != ' ' and self.board[row][col] == self.board[row-1][col+1] == self.board[row-2][col+2] == self.board[row-3][col+3]:
+                if (
+                    self.board[row][col] != ' ' and
+                    self.board[row][col] == self.board[row-1][col+1] == self.board[row-2][col+2] == self.board[row-3][col+3]
+                ):
                     return True
 
         return False
+    
+    def show_message(self, message):
+        messagebox.showinfo("Game Over", message)
+    
+    def reset_board(self):
+        self.board = [[' ' for _ in range(7)] for _ in range(6)]
+        for row in self.buttons:
+            for button in row:
+                button.config(text=' ', bg='white')
+    
+    def load_music(self):
+        pygame.mixer.init()
+        self.music_files = [
+            'champions.mp3',  # Add the path to your music file
+            # Add more music files if needed
+        ]
+    
+    def play_random_music(self):
+        music_file = random.choice(self.music_files)
+        pygame.mixer.music.load(music_file)
+        pygame.mixer.music.play()
+    
+    def update_scoreboard(self):
+        self.yellow_label.config(text=f"Yellow Wins: {self.scores['Yellow']}")
+        self.red_label.config(text=f"Red Wins: {self.scores['Red']}")
+    
+    def start_game(self):
+        self.current_player = 0
+        self.reset_board()
+        self.new_game_button.grid_forget()
+    
+    def new_game(self):
+        self.start_game()
+        pygame.mixer.music.stop()
+    
+    def start(self):
+        self.root.mainloop()
 
-    def play(self):
-        while True:
-            self.print_board()
-            column = int(input(f"{self.players[self.current_player]}, choose a column (0-6): "))
-            if self.is_valid_move(column):
-                if self.drop_disc(column):
-                    if self.check_win():
-                        self.print_board()
-                        print(f"{self.players[self.current_player]} wins!")
-                        break
-                    elif all(self.board[row][col] != ' ' for row in range(6) for col in range(7)):
-                        self.print_board()
-                        print("It's a tie!")
-                        break
-                    else:
-                        self.current_player = 1 - self.current_player
-                else:
-                    print("Column is full. Try again.")
-            else:
-                print("Invalid column. Try again.")
-
-
-# Let the players choose their color
-color_choice = int(input("Choose your color:\n0. Yellow\n1. Red\n"))
-game = Connect4(color_choice)
-game.play()
+game = Connect4GUI()
+game.start()
